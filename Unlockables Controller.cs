@@ -1,4 +1,9 @@
-//Made by Xenon
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using System.Linq;
+using UnityEngine.UI;
+
 public class UnlockablesController : MonoBehaviour
 {
     //Use it to access the class from anywhere in your mod
@@ -8,13 +13,13 @@ public class UnlockablesController : MonoBehaviour
     private List<Unlockable> _unlockables = new List<Unlockable>();
     public List<Unlockable> unlockables => _unlockables;
 
+    private Scrollbar _scrollbar = UnityEngine.Object.FindObjectOfType<Scrollbar>();
+    private SpawnableAsset[] _allAssets;
+
     //mod tag to prevent conflict between mods
     public string modTag;
     //sprite that locked items will have
     public Sprite lockedSprite;
-
-    private List<ItemButtonBehaviour> _buttons;
-    private Scrollbar _scrollbar = UnityEngine.Object.FindObjectOfType<Scrollbar>();
 
     public void Start()
     {
@@ -23,6 +28,7 @@ public class UnlockablesController : MonoBehaviour
         Main = gameObject.GetComponent<UnlockablesController>();
         StartCoroutine(Utils.NextFrameCoroutine(() =>
         {
+            _allAssets = UnityEngine.Object.FindObjectsOfType<SpawnableAsset>();
             foreach (var unlockable in unlockables)
             {
                 _UpdateCatalog(unlockable.originalName, false);
@@ -53,6 +59,10 @@ public class UnlockablesController : MonoBehaviour
     /// <param name="hideName">Hide name in catalog (default: false)</param>
     public void Lock(string assetName, string howToUnlock = "This item has not been unlocked yet!", bool hideName = false)
     {
+        if(CatalogBehaviour.Main.SelectedItem.name == assetName)
+        {
+            CatalogBehaviour.Main.SetItem(_allAssets.PickRandom());
+        }
         if (_GetKey(assetName) == null)
         {
             RegisterUnlockable(assetName, howToUnlock, hideName);
@@ -182,7 +192,7 @@ public class UnlockablesController : MonoBehaviour
             {
                 StartCoroutine(Utils.NextFrameCoroutine(() =>
                 {
-                    if (_scrollbar) _scrollbar.value = scrollBuffer;
+                    if(_scrollbar) _scrollbar.value = scrollBuffer;
                 }));
             }));
         }
