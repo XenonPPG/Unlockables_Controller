@@ -2,6 +2,8 @@
 
 This script allows you to easily create unlockable items for your mod. It offers real-time, fast catalog updates. Locked items are displayed with a lock icon, and their descriptions inform users how to unlock them.
 
+Check few sprites that I left in the repository :)
+
 ## Features
 - **Real-time updates**: Changes to the catalog are applied instantly.
 - **User-friendly interface**: Locked items have clear indicators and guidance on unlocking.
@@ -120,5 +122,3 @@ UnlockablesController.Main.Unlock("Mega Brick", false);
 
 #### `public void DeleteKeys()`
 - **Description**: Deletes all keys, resetting the unlockables system for the mod.
-
----
