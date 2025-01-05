@@ -14,7 +14,7 @@ public class UnlockablesController : MonoBehaviour
     public List<Unlockable> unlockables => _unlockables;
 
     private Scrollbar _scrollbar = UnityEngine.Object.FindObjectOfType<Scrollbar>();
-    private SpawnableAsset[] _allAssets;
+    private List<SpawnableAsset> _allAssets;
 
     //mod tag to prevent conflict between mods
     public string modTag;
@@ -28,7 +28,7 @@ public class UnlockablesController : MonoBehaviour
         Main = gameObject.GetComponent<UnlockablesController>();
         StartCoroutine(Utils.NextFrameCoroutine(() =>
         {
-            _allAssets = UnityEngine.Object.FindObjectsOfType<SpawnableAsset>();
+            _allAssets = UnityEngine.Object.FindObjectsOfType<SpawnableAsset>().ToList();
             foreach (var unlockable in unlockables)
             {
                 _UpdateCatalog(unlockable.originalName, false);
@@ -39,12 +39,12 @@ public class UnlockablesController : MonoBehaviour
     /// <summary>
     /// Register item as unlockable
     /// </summary>
-    /// <param name="assetName">SpawnableAsset's name</param>
-    /// <param name="howToUnlock">How to unlock the item (default: "This item has not been unlocked yet!") </param>
-    /// <param name="hideName">Hide name in catalog (default: false)</param>
-    public void RegisterUnlockable(string assetName, string howToUnlock = "This item has not been unlocked yet!", bool hideName = false)
+    /// <param name="assetName">SpawnableAsset</param>
+    /// <param name="howToUnlock">Unlock instructions</param>
+    /// <param name="individualLockedSprite">Override locked sprite</param>
+    public void RegisterUnlockable(string assetName, string howToUnlock = "This item has not been unlocked yet!", Sprite individualLockedSprite = null)
     {
-        _unlockables.Add(new Unlockable(assetName, howToUnlock, hideName));
+        _unlockables.Add(new Unlockable(assetName, howToUnlock, individualLockedSprite));
         if (_GetKey(assetName) == null)
         {
             _SetKey(assetName, false);
@@ -54,23 +54,26 @@ public class UnlockablesController : MonoBehaviour
     /// <summary>
     /// Lock item. Unregistered items won't save
     /// </summary>
-    /// <param name="assetName">SpawnableAsset's name</param>
-    /// <param name="howToUnlock">How to unlock the item (default: "This item has not been unlocked yet!") </param>
-    /// <param name="hideName">Hide name in catalog (default: false)</param>
-    public void Lock(string assetName, string howToUnlock = "This item has not been unlocked yet!", bool hideName = false)
+    /// <param name="assetName">SpawnableAsset</param>
+    /// <param name="howToUnlock">Unlock instructions</param>
+    /// <param name="individualLockedSprite">Override locked sprite</param>
+    public void Lock(string assetName, string howToUnlock = "This item has not been unlocked yet!", Sprite individualLockedSprite = null)
     {
-        if(CatalogBehaviour.Main.SelectedItem.name == assetName)
+        if(CatalogBehaviour.Main.SelectedItem.name == assetName && _allAssets.Count > 0)
         {
-            CatalogBehaviour.Main.SetItem(_allAssets.PickRandom());
+            CatalogBehaviour.Main.SetItem(_allAssets.Where(item => !_unlockables.Select(u => u.spawnableAsset).Contains(item)).ToArray().PickRandom());
         }
         if (_GetKey(assetName) == null)
         {
-            RegisterUnlockable(assetName, howToUnlock, hideName);
+            RegisterUnlockable(assetName, howToUnlock, individualLockedSprite);
             _UpdateCatalog(assetName, false);
         }
-        else if (!IsLocked(assetName))
+        else
         {
             _SetKey(assetName, false);
+            var item = _unlockables[_unlockables.FindIndex(i => i.originalName == assetName)];
+            item.howToUnlock = howToUnlock;
+            if (individualLockedSprite) item.individualLockedSprite = individualLockedSprite;
             _UpdateCatalog(assetName, false);
         }
     }
@@ -78,8 +81,8 @@ public class UnlockablesController : MonoBehaviour
     /// <summary>
     /// Unlock item
     /// </summary>
-    /// <param name="assetName">SpawnableAsset's name</param>
-    /// <param name="notify">Notify the unlock and switch category?</param>
+    /// <param name="assetName">SpawnableAsset</param>
+    /// <param name="notify">Should notify and switch category?</param>
     public void Unlock(string assetName, bool notify = true)
     {
         if (IsLocked(assetName))
@@ -111,7 +114,7 @@ public class UnlockablesController : MonoBehaviour
     {
         foreach (var item in _unlockables)
         {
-            Lock(item.originalName, item.howToUnlock);
+            Lock(item.originalName, item.howToUnlock, item.individualLockedSprite);
         }
         if (notify) ModAPI.Notify($"<color=red><size=175%>Unlockables were reset!");
     }
@@ -153,11 +156,7 @@ public class UnlockablesController : MonoBehaviour
         ModAPI.Notify("<color=orange><size=200%>KEYS DELETED");
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="assetName"></param>
-    /// <param name="changeCategory"></param>
+    //Update item's button
     private void _UpdateCatalog(string assetName, bool changeCategory)
     {
         var unlockable = unlockables.Find(u => u.originalName == assetName);
@@ -171,9 +170,9 @@ public class UnlockablesController : MonoBehaviour
         if (IsLocked(unlockable.originalName))
         {
             item = ScriptableObject.CreateInstance<SpawnableAsset>();
-            item.name = "<color=orange>LOCKED: <color=white>" + (unlockable.hideName ? "???" : unlockable.originalName);
+            item.name = "<color=orange>LOCKED: <color=white>" + unlockable.originalName;
             item.Description = unlockable.howToUnlock;
-            item.ViewSprite = lockedSprite;
+            item.ViewSprite = unlockable.individualLockedSprite ?? lockedSprite;
             item.Category = unlockable.spawnableAsset.Category;
         }
         else
@@ -222,17 +221,17 @@ public class UnlockablesController : MonoBehaviour
         public SpawnableAsset spawnableAsset;
         public string originalName;
         public Sprite originalSprite;
+        public Sprite individualLockedSprite;
         public string originalDescription;
         public string howToUnlock;
-        public bool hideName;
 
         private bool _updated = false;
 
-        public Unlockable(string originalName, string howToUnlock, bool hideName)
+        public Unlockable(string originalName, string howToUnlock, Sprite individualLockedSprite)
         {
             this.originalName = originalName;
             this.howToUnlock = howToUnlock;
-            this.hideName = hideName;
+            this.individualLockedSprite = individualLockedSprite;
         }
         public void SetValues()
         {
