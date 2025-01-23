@@ -7,7 +7,18 @@ using UnityEngine.UI;
 public class UnlockablesController : MonoBehaviour
 {
     //Use it to access the class from anywhere in your mod
-    public static UnlockablesController Main;
+    public static UnlockablesController Main
+    {
+        get
+        {
+            if (!_instance)
+            {
+                _instance = new GameObject("UNLOCKABLES CONTROLLER").AddComponent<UnlockablesController>();
+            }
+            return _instance;
+        }
+    }
+    private static UnlockablesController _instance;
 
     //list of unlockables
     private List<Unlockable> _unlockables = new List<Unlockable>();
@@ -25,7 +36,6 @@ public class UnlockablesController : MonoBehaviour
     {
         if (modTag == null) throw new Exception("modTag is null");
         if (lockedSprite == null) throw new Exception("lockedSprite is null");
-        Main = gameObject.GetComponent<UnlockablesController>();
         StartCoroutine(Utils.NextFrameCoroutine(() =>
         {
             _allAssets = UnityEngine.Object.FindObjectsOfType<SpawnableAsset>().ToList();
@@ -59,7 +69,7 @@ public class UnlockablesController : MonoBehaviour
     /// <param name="individualLockedSprite">Override locked sprite</param>
     public void Lock(string assetName, string howToUnlock = "This item has not been unlocked yet!", Sprite individualLockedSprite = null)
     {
-        if(CatalogBehaviour.Main.SelectedItem.name == assetName && _allAssets.Count > 0)
+        if (CatalogBehaviour.Main.SelectedItem.name == assetName && _allAssets.Count > 0)
         {
             CatalogBehaviour.Main.SetItem(_allAssets.Where(item => !_unlockables.Select(u => u.spawnableAsset).Contains(item)).ToArray().PickRandom());
         }
@@ -103,7 +113,7 @@ public class UnlockablesController : MonoBehaviour
     /// <returns>Returns true if item is locked</returns>
     public bool IsLocked(string assetName)
     {
-        return _GetKey(assetName) == null ? false : !(bool)_GetKey(assetName);
+        return !_GetKey(assetName) ?? false;
     }
 
     /// <summary>
@@ -162,7 +172,7 @@ public class UnlockablesController : MonoBehaviour
         var unlockable = unlockables.Find(u => u.originalName == assetName);
         unlockable.SetValues();
 
-        var scrollBuffer = _scrollbar == null ? 1 : _scrollbar.value;
+        var scrollBuffer = _scrollbar?.value ?? 1;
         var categoryBuffer = CatalogBehaviour.Main.SelectedCategory;
         CatalogBehaviour.Main.SetCategory(unlockable.spawnableAsset.Category);
 
@@ -191,7 +201,7 @@ public class UnlockablesController : MonoBehaviour
             {
                 StartCoroutine(Utils.NextFrameCoroutine(() =>
                 {
-                    if(_scrollbar) _scrollbar.value = scrollBuffer;
+                    if (_scrollbar) _scrollbar.value = scrollBuffer;
                 }));
             }));
         }
@@ -216,7 +226,7 @@ public class UnlockablesController : MonoBehaviour
     }
 
 
-    public class Unlockable
+    public class Unlockable : MonoBehaviour
     {
         public SpawnableAsset spawnableAsset;
         public string originalName;
