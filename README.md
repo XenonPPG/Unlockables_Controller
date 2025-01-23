@@ -16,7 +16,7 @@ Place the entry point anywhere in the `void Main` method of your mod.
 
 #### Code Example:
 ```csharp
-var unlockables = new GameObject("UNLOCKABLES CONTROLLER").AddComponent<UnlockablesController>();
+var unlockables = UnlockablesController.Main;
 unlockables.modTag = "some mod tag"; // Prevents conflicts between mods
 unlockables.lockedSprite = ModAPI.LoadSprite("sprites/Locked.png"); // Sets the default sprite for locked items
 ```
